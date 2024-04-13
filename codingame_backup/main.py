@@ -1,35 +1,18 @@
+import logging
 from pathlib import Path
 
+import codingame
 import typer
-from typing_extensions import Annotated
+from rich.console import Console
+from rich.table import Table
 
 from codingame_backup import __app_name__
 from codingame_backup import __version__
+from codingame_backup.config import config
+from codingame_backup.config import setup_logging
 
-
-class ExampleSession:
-    def __init__(self, url: str):
-        print(f"opening session to '{url}'")
-        self.url = url
-
-    def send(self, data: str) -> None:
-        print(f"sending '{data}' to '{self.url}'")
-
-    def close(self) -> None:
-        print("closing session")
-
-
-def session_dependency(ctx: typer.Context) -> ExampleSession:
-    """opens a session for decorated subcommands"""
-    session = ExampleSession("https://example.com")
-    ctx.call_on_close(session.close)
-    return session
-
-
-def parse_session(url: str) -> ExampleSession:
-    session = ExampleSession(url)
-    return session
-
+setup_logging()
+log = logging.getLogger(__name__)
 
 app = typer.Typer(
     name=__app_name__,
@@ -53,23 +36,21 @@ def common(
         version: bool = typer.Option(None, "--version", callback=version_callback),
 ):
     """[blue]Codingame backup[/blue]"""
-    _, _ = ctx, version  # consume unused arguments
-
+    _ = version  # consume unused arguments
+    # create and log in the user
+    log.debug('creating the codingame client')
+    client = codingame.Client()
+    client.login(remember_me_cookie=config['REMEMBER_ME_COOKIE'])
+    ctx.obj = client
 
 
 @app.command()
 def download_solutions(
-        session: Annotated[ExampleSession, typer.Option(
-            parser=parse_session,
-            callback=session_dependency,
-            hidden=True,
-        )] = None
+        ctx: typer.Context
 ) -> None:
     """Download excercise solutions from Codingame."""
     # prepare output folder
     Path('output').mkdir(exist_ok=True)
-    session.send('ahoj')
-
 
 
 @app.command()
@@ -78,8 +59,38 @@ def list_solutions() -> None:
 
 
 @app.command()
-def show_statistics() -> None:
+def show_statistics(
+        ctx: typer.Context
+) -> None:
     """Show how many excercises are completed."""
+
+    user = ctx.obj.codingamer
+    console = Console()
+    table = Table("Attribute", "Value")
+    attributes = [
+        'avatar',
+        'avatar_url',
+        'biography',
+        'category',
+        'company',
+        'country_id',
+        'cover',
+        'cover_url',
+        'id',
+        'level',
+        'professional',
+        'profile_url',
+        'pseudo',
+        'public_handle',
+        'rank',
+        'school',
+        'student',
+        'tagline',
+        'xp',
+    ]
+    for attr in attributes:
+        table.add_row(attr, str(getattr(user, attr)))
+    console.print(table)
 
 
 if __name__ == "__main__":
