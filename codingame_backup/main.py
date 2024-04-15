@@ -3,6 +3,7 @@ from pathlib import Path
 
 import codingame
 import typer
+from rich import print
 from rich.console import Console
 from rich.table import Table
 
@@ -22,6 +23,19 @@ app = typer.Typer(
 )
 
 
+class CGClient:
+
+    def __init__(self, client: codingame.Client):
+        self.client = client
+        self.user_id = client.codingamer.id
+
+    def get_solved_excercises(self) -> list[dict]:
+        """Get and sort all excercises."""
+        all_excercises = self.client.request('Puzzle', 'findAllMinimalProgress', [self.user_id])
+        only_solved = list(exc for exc in all_excercises if exc['submitted'])
+        return only_solved
+
+
 def version_callback(value: bool):
     if value:
         typer.echo(
@@ -37,11 +51,12 @@ def common(
 ):
     """[blue]Codingame backup[/blue]"""
     _ = version  # consume unused arguments
-    # create and log in the user
+    # create the client and log in the user
+    # this client will be added to the context and used in all commands
     log.debug('creating the codingame client')
     client = codingame.Client()
     client.login(remember_me_cookie=config['REMEMBER_ME_COOKIE'])
-    ctx.obj = client
+    ctx.obj = CGClient(client)
 
 
 @app.command()
@@ -51,6 +66,9 @@ def download_solutions(
     """Download excercise solutions from Codingame."""
     # prepare output folder
     Path('output').mkdir(exist_ok=True)
+
+    levels = ctx.obj.get_solved_excercises()
+    print(levels)
 
 
 @app.command()
