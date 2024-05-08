@@ -10,7 +10,7 @@ from rich.table import Table
 
 from codingame_backup import __app_name__
 from codingame_backup import __version__
-from codingame_backup.config import config
+from codingame_backup.config import Settings
 from codingame_backup.config import setup_logging
 
 setup_logging()
@@ -23,6 +23,7 @@ app = typer.Typer(
     rich_markup_mode='rich',
 )
 
+settings = Settings()
 
 class CGClient(SyncClient):
     """Custom wrapper around the codingame SyncClient directly."""
@@ -31,7 +32,7 @@ class CGClient(SyncClient):
         super().__init__()
         # automatic login on init
         # no need to use client without login
-        self.login(remember_me_cookie=config['REMEMBER_ME_COOKIE'])
+        self.login(remember_me_cookie=settings.remember_me_cookie)
 
     def get_solved_excercises(self) -> list[dict]:
         """Get and sort all excercises."""

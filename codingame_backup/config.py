@@ -1,17 +1,19 @@
 import logging.config
-import os
 import pathlib
 from logging.handlers import RotatingFileHandler
 
-from dotenv import dotenv_values
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings
+from pydantic_settings import SettingsConfigDict
 
 from codingame_backup import __app_name__
 
-# env cofig
-config = {
-    **dotenv_values(".env"),  # load shared development variables
-    **os.environ,  # override loaded values with environment variables
-}
+
+class Settings(BaseSettings):
+    remember_me_cookie: SecretStr
+
+    # load the .env file
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 class MyRotatingFileHandler(RotatingFileHandler):
