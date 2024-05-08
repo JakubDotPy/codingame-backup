@@ -7,6 +7,12 @@ from dotenv import dotenv_values
 
 from codingame_backup import __app_name__
 
+# env cofig
+config = {
+    **dotenv_values(".env"),  # load shared development variables
+    **os.environ,  # override loaded values with environment variables
+}
+
 
 class MyRotatingFileHandler(RotatingFileHandler):
     """"""
@@ -43,7 +49,7 @@ def setup_logging():
             'rich'         : {
                 '()'             : 'rich.logging.RichHandler',
                 'rich_tracebacks': True,
-                'level':    'DEBUG',
+                'level': 'INFO',
             },
             'file_hand_rot': {
                 'class'      : 'codingame_backup.config.MyRotatingFileHandler',
@@ -76,10 +82,3 @@ def setup_logging():
     # setup logging
     logging.config.dictConfig(LOG_CONF)
     logging.debug('logging setup complete')
-
-
-# env cofig
-config = {
-    **dotenv_values(".env"),  # load shared development variables
-    **os.environ,  # override loaded values with environment variables
-}

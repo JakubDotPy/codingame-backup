@@ -1,9 +1,10 @@
 import logging
 from pathlib import Path
+from typing import Annotated
+from typing import Optional
 
-import codingame
 import typer
-from rich import print
+from codingame.client.sync import SyncClient
 from rich.console import Console
 from rich.table import Table
 
@@ -23,17 +24,18 @@ app = typer.Typer(
 )
 
 
-class CGClient:
+class CGClient(SyncClient):
+    """Custom wrapper around the codingame SyncClient directly."""
 
-    def __init__(self, client: codingame.Client):
-        self.client = client
-        self.user_id = client.codingamer.id
+    def __init__(self):
+        super().__init__()
+        # automatic login on init
+        # no need to use client without login
+        self.login(remember_me_cookie=config['REMEMBER_ME_COOKIE'])
 
     def get_solved_excercises(self) -> list[dict]:
         """Get and sort all excercises."""
-        all_excercises = self.client.request('Puzzle', 'findAllMinimalProgress', [self.user_id])
-        only_solved = list(exc for exc in all_excercises if exc['submitted'])
-        return only_solved
+        return self.request('Puzzle', 'findAllMinimalProgress', [self.codingamer.id])
 
 
 def version_callback(value: bool):
@@ -46,29 +48,39 @@ def version_callback(value: bool):
 
 @app.callback()
 def common(
-        ctx: typer.Context,
-        version: bool = typer.Option(None, "--version", callback=version_callback),
+        version: Annotated[
+            Optional[bool],
+            typer.Option("--version", callback=version_callback, is_eager=True),
+        ] = None,
 ):
     """[blue]Codingame backup[/blue]"""
     _ = version  # consume unused arguments
-    # create the client and log in the user
-    # this client will be added to the context and used in all commands
-    log.debug('creating the codingame client')
-    client = codingame.Client()
-    client.login(remember_me_cookie=config['REMEMBER_ME_COOKIE'])
-    ctx.obj = CGClient(client)
 
 
 @app.command()
-def download_solutions(
-        ctx: typer.Context
-) -> None:
+def check_login() -> None:
+    """Create client and verify login."""
+    typer.echo('checking login')
+    try:
+        client = CGClient()
+    except Exception as e:
+        typer.secho(e, fg=typer.colors.RED, bold=True)
+    else:
+        typer.echo(client.codingamer)
+        typer.secho('login successfull', fg=typer.colors.GREEN)
+
+
+@app.command()
+def download_solutions() -> None:
     """Download excercise solutions from Codingame."""
     # prepare output folder
     Path('output').mkdir(exist_ok=True)
 
-    levels = ctx.obj.get_solved_excercises()
-    print(levels)
+    client = CGClient()
+
+    # excercises = ctx.obj.get_solved_excercises()
+    # only_solved = list(exc for exc in excercises if exc['submitted'])
+    # print(only_solved)
 
 
 @app.command()
